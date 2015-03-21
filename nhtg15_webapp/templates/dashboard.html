@@ -1,0 +1,120 @@
+{% extends 'layout.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+  <section class="row">
+    <div class="columns">
+      <p>Welcome to your dashboard. Here you can change your details and alert preferences, and browse through previous alerts.</p>
+    </div>
+  </section>
+
+
+  <form action="{{ url_for('views.update_details') }}" method="post">
+    <section class="row">
+      <div class="columns">
+        <h3>Personal Details</h3>
+      </div>
+    </section>
+    <section class="row">
+      <div class="large-6 columns">
+        <label for="firstname">First Name(s)</label>
+        <input type="text" name="firstname" id="firstname" value="{{ current_user.firstname }}" />
+      </div>
+      <div class="large-6 columns">
+        <label for="surname">Surname</label>
+        <input type="text" name="surname" id="surname" value="{{ current_user.surname }}" />
+      </div>
+    </section>
+    <section class="row">
+      <div class="large-6 columns">
+        <label for="email">Email Address</label>
+        <input type="email" name="email" id="email" value="{{ current_user.email }}" />
+      </div>
+      <div class="large-6 columns">
+        <label for="phone">Phone Number</label>
+        <input type="text" name="phone" id="phone" value="{{ current_user.phone }}" />
+      </div>
+    </section>
+    <section class="row">
+      <div class="large-4 columns">
+          <label for="oldpassword">Old Password</label>
+          <input type="password" name="oldpassword" id="oldpassword" />
+      </div>
+      <div class="large-4 columns">
+          <label for="password">New Password</label>
+          <input type="password" name="password" id="password" />
+      </div>
+      <div class="large-4 columns">
+          <label for="confirm">Confirm New Password</label>
+          <input type="password" name="confirm" id="confirm" />
+      </div>
+    </section>
+    <section class="row">
+      <div class="large-8 columns">
+        <p class="small">Leave these fields blank if you don't wish to change your password.</p>
+      </div>
+      <div class="large-4 columns">
+        <input type="submit" value="Update" class="button small right" />
+      </div>
+    </section>
+  </form>
+
+  {% if not current_user.email_verified %}
+    <section class="row">
+      <div class="columns">
+        <p>In order to send you email notifications for allergen alerts, we need to verify your email. You were sent an email containing a 6 digit code when you registered (<a href="{{ url_for('views.resend_email_verification') }}">click here to resend</a>), enter it below to validate your email</p>
+        <form action="{{ url_for('views.verify_email') }}" method="post">
+          <div class="row collapse">
+            <div class="small-8 columns">
+              <input type="text" name="code" />
+            </div>
+            <div class="small-4 columns">
+              <input type="submit" value="Submit" class="button postfix" />
+            </div>
+          </div>
+        </form>
+      </div>
+    </section>
+  {% endif %}
+  {% if not current_user.sms_verified %}
+    <section class="row">
+      <div class="columns">
+        <p>In order to send you sms notifications for allergen alerts, we need to verify your sms. You were sent an sms containing a 6 digit code when you registered (<a href="{{ url_for('views.resend_sms_verification') }}">click here to resend</a>), enter it below to validate your sms</p>
+        <form action="{{ url_for('views.verify_sms') }}" method="post">
+          <div class="row collapse">
+            <div class="small-8 columns">
+              <input type="text" name="code" />
+            </div>
+            <div class="small-4 columns">
+              <input type="submit" value="Submit" class="button postfix" />
+            </div>
+          </div>
+        </form>
+      </div>
+    </section>
+  {% endif %}
+
+  <section class="row">
+    <div class="columns">
+      <h3>Previous Alerts</h3>
+      {% for alert in alerts.items %}
+      <article class="alert">
+        <a href="{{ alert.long_url }}">
+          <h4>{{ alert.allergen.nicename }} found in {{ alert.brand }} {{ alert.product }}.</h4>
+          <p>Alert released {{ alert.datetime.strftime('%c') }}</p>
+        </a>
+      </article>
+      {% endfor %}
+      {% if alerts.has_prev %}
+        <a class="button" href="{{ url_for('views.index', page=alerts.prev_num) }}">Newer alerts</a>
+      {% endif %}
+      {% if alerts.has_next %}
+        <a class="button right" href="{{ url_for('views.index', page=alerts.next_num) }}">Older alerts</a>
+      {% endif %}
+    </div>
+  </section>
+{% endblock %}
+
+{% block js %}
+{% endblock %}

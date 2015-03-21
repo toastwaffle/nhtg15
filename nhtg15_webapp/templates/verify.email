@@ -1,0 +1,3 @@
+Hi {{ user.fullname }}!
+
+Your verification code for AllergenAlert is {{ user.email_verification_key }}. Please enter this into the verification field on your dashboard in order to receive allergen alert notifications.

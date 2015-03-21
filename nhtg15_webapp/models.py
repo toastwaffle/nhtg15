@@ -1,5 +1,7 @@
 # coding: utf-8
 
+import random
+
 from flask.ext.bcrypt import Bcrypt
 from flask.ext.sqlalchemy import SQLAlchemy
 import flask
@@ -87,6 +89,7 @@ ALLERGENS = [
     Allergen('sesame seeds'),
     Allergen('soya'),
     Allergen('sulphur dioxide'),
+    Allergen('almonds'),
 ]
 
 
@@ -129,6 +132,22 @@ class User(DB.Model):
         DB.Boolean(),
         nullable=False
     )
+    email_verification_key = DB.Column(
+        DB.String(6),
+        nullable=True
+    )
+    sms_verification_key = DB.Column(
+        DB.String(6),
+        nullable=True
+    )
+    email_verified = DB.Column(
+        DB.Boolean(),
+        nullable=False
+    )
+    sms_verified = DB.Column(
+        DB.Boolean(),
+        nullable=False
+    )
 
     allergens = DB.relationship(
         'Allergen',
@@ -140,22 +159,26 @@ class User(DB.Model):
         lazy='dynamic'
     )
 
-    def __init__(self, email, password, firstname, surname, phone, college, affiliation):
+    def __init__(self, email, password, firstname, surname, phone):
         self.email = email
-        self.passhash = bcrypt.generate_password_hash(password)
+        self.set_password(password)
         self.firstname = firstname
         self.surname = surname
         self.phone = phone
         self.send_email_alerts = False
         self.send_sms_alerts = False
+        self.email_verification_key = str(random.randint(100000, 999999))
+        self.sms_verification_key = str(random.randint(100000, 999999))
+        self.email_verified = False
+        self.sms_verified = False
 
     def __repr__(self):
         return "<User({0}): {1}>".format(self.id, self.fullname)
 
-    def checkPassword(self, candidate):
+    def check_password(self, candidate):
         return BCRYPT.check_password_hash(self.passhash, candidate)
 
-    def setPassword(self, password):
+    def set_password(self, password):
         self.passhash = BCRYPT.generate_password_hash(password)
 
     def is_active(self):
@@ -189,10 +212,10 @@ class User(DB.Model):
         return user
 
     def send_alert(self, alert):
-        if self.send_email_alerts:
+        if self.email_verified and self.send_email_alerts:
             emailer.EMAILER.send_template(
                 self.email,
-                'Allergy Alert: {} in {} {}'.format(
+                '{} in {} {}'.format(
                     alert.allergen.name.title(),
                     alert.brand,
                     alert.product
@@ -202,12 +225,28 @@ class User(DB.Model):
                 user=self
             )
 
-        if self.send_sms_alerts:
+        if self.sms_verified and self.send_sms_alerts:
             texter.TEXTER.send_template(
                 self.phone,
                 'allergy_alert.sms',
                 alert=alert
             )
+
+    def send_email_verification(self):
+        emailer.EMAILER.send_template(
+            self.email,
+            'Verify Email Address',
+            'verify.email',
+            user=self
+        )
+
+    def send_sms_verification(self):
+        texter.TEXTER.send_template(
+            self.phone,
+            'verify.sms',
+            user=self
+        )
+
 
 
 class Alert(DB.Model):
@@ -256,11 +295,13 @@ class Alert(DB.Model):
         foreign_keys=[allergen_id]
     )
 
-    def __init__(self, brand, product, location, datetime, allergen):
+    def __init__(self, brand, product, location, datetime, allergen, url):
         self.brand = brand
         self.product = product
         self.location = location
         self.datetime = datetime
+        self.long_url = url
+        self.short_url = shortener.shorten(url)
 
         if hasattr(allergen, 'id'):
             self.allergen_id = allergen.id
@@ -278,18 +319,6 @@ class Alert(DB.Model):
             return None
 
         return alert
-
-    def update_urls(self):
-        if self.id is None:
-            raise NotPersistedYetError('{} has not been persisted'.format(self))
-
-        self.long_url = '{}/alert/{}/'.format(
-            app.APP.config['SITE_URL'],
-            self.id
-        )
-        self.short_url = shortener.shorten(self.long_url)
-
-        DB.session.commit()
 
     def send_alerts(self):
         for user in self.allergen.users:

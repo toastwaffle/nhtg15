@@ -59,13 +59,12 @@ def main(argv):
             dataitem['product'],
             dataitem['location'],
             alert_date,
-            models.Allergen.get_by_name(dataitem['allergen'].lower())
+            models.Allergen.get_by_name(dataitem['allergen'].lower()),
+            entry['link']
         )
 
         database.DB.session.add(alert)
         database.DB.session.commit()
-
-        alert.update_urls()
 
         alert.send_alerts()
 
