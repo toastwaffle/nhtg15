@@ -1,6 +1,6 @@
 # coding: utf-8
 import site, os, sys
-site.addsitedir('/var/www/nhtg15/lib/python2.7/site-packages/')
+site.addsitedir('/srv/http_nhtg15/lib/python2.7/site-packages/')
 sys.path.append(os.path.realpath(__file__).replace('/wsgi.py',''))
 
 from flask.ext import login
