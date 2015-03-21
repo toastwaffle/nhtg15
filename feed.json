@@ -1,0 +1,20 @@
+[
+    {
+        "brand": "Random Brand 3",
+        "product": "Random product 3",
+        "allergen": "Almonds",
+        "location": "Manchester"
+    },
+    {
+        "brand": "Random Brand 2",
+        "product": "Random product 2",
+        "allergen": "Milk",
+        "location": "Wales"
+    },
+    {
+        "brand": "Random Brand 1",
+        "product": "Random product 1",
+        "allergen": "Peanuts",
+        "location": "London"
+    }
+]

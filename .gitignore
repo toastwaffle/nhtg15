@@ -52,3 +52,17 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# VirtualEnv folders
+
+bin/
+include/
+share/
+
+# pip
+
+pip-selfcheck.json
+
+# config
+
+nhtg15_webapp/config.py

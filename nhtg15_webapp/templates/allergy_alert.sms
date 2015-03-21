@@ -1,0 +1,3 @@
+ALLERGEN ALERT:
+{{ alert.brand }} {{ alert.product }} contains {{ alert.allergen.nicename }}.
+See {{ alert.short_url }} for details

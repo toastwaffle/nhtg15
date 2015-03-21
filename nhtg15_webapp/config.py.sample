@@ -1,0 +1,19 @@
+# coding: utf-8
+
+SECRET_KEY = b'' # Use `python -c "import os; print repr(os.urandom(24))"` to generate
+SQLALCHEMY_POOL_RECYCLE = 300
+SEND_FILE_MAX_AGE_DEFAULT = 1209600
+PREFERRED_URL_SCHEME = 'https'
+DEBUG = True
+SQLALCHEMY_ECHO = True
+SQLALCHEMY_DATABASE_URI = 'mysql://user:password@host/database'
+ENVIRONMENT = 'DEVELOPMENT'
+TRAP_BAD_REQUEST_ERRORS = True
+TRAP_HTTP_EXCEPTIONS = True
+EMAIL_FROM = 'abc@example.com'
+SMTP_HOST = 'localhost'
+BITLY_ACCESS_TOKEN = '1234567890qwertyuiopasdfghjklzxcvbnm'
+SITE_URL = 'http://www.example.com'
+SMS_ACCOUNT_SID = '1234567890qwertyuiopasdfghjklzxcvbnm'
+SMS_AUTH_TOKEN = '1234567890qwertyuiopasdfghjklzxcvbnm'
+SMS_FROM = '+441234567890'
