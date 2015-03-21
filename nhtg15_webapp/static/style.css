@@ -72,3 +72,7 @@ article.alert p {
 p.small {
   font-size: 0.75em;
 }
+
+div#allergens [class*="column"]+[class*="column"]:last-child {
+  float: left;
+}

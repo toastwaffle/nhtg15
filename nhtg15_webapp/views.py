@@ -15,7 +15,9 @@ def index(page=1):
         return flask.render_template("home.html", form={})
     else:
         alerts = models.Alert.query.paginate(page, 2)
-        return flask.render_template("dashboard.html", alerts=alerts)
+        return flask.render_template("dashboard.html",
+                                     alerts=alerts,
+                                     allergens=models.Allergen.query.all())
 
 @VIEWS.route('/login/', methods=['POST'])
 def login():
@@ -139,10 +141,105 @@ def logout():
 
     return flask.redirect(flask.url_for('.index'))
 
-@VIEWS.route('/updatedetails/')
+@VIEWS.route('/updatedetails/', methods=['POST'])
 @login_required
 def update_details():
-    pass
+    valid = True
+    flashes = []
+
+    if (
+        flask.request.form['email'] != current_user.email and
+        models.User.get_by_email(flask.request.form['email']) is not None
+    ):
+        flashes.append(u'That email address is already in use. ')
+        valid = False
+
+    if (
+        'oldpassword' in flask.request.form and
+        flask.request.form['oldpassword'] != ''
+    ):
+        if not current_user.check_password(flask.request.form['oldpassword']):
+            flashes.append(u'Current password is incorrect')
+            valid = False
+
+        if (
+            'password' not in flask.request.form or
+            'confirm' not in flask.request.form or
+            flask.request.form['password'] == '' or
+            flask.request.form['password'] != flask.request.form['confirm']
+        ):
+            flashes.append(u'New passwords do not match')
+            valid = False
+
+        if len(flask.request.form['password']) < 8:
+            flashes.append(u'Password must be at least 8 characters long')
+            valid = False
+
+    if (
+        'firstname' not in flask.request.form or
+        flask.request.form['firstname'] == ''
+    ):
+        flashes.append(u'First Name cannot be blank')
+        valid = False
+
+    if (
+        'surname' not in flask.request.form or
+        flask.request.form['surname'] == ''
+    ):
+        flashes.append(u'Surname cannot be blank')
+        valid = False
+
+    if (
+        'email' not in flask.request.form or
+        flask.request.form['email'] == ''
+    ):
+        flashes.append(u'Email cannot be blank')
+        valid = False
+
+    if (
+        'phone' not in flask.request.form or
+        flask.request.form['phone'] == ''
+    ):
+        flashes.append(u'Phone cannot be blank')
+        valid = False
+
+    if not valid:
+        flash(
+            (
+                u'There were errors in your provided details. Please fix '
+                u'these and try again'
+            ),
+            'error'
+        )
+        for msg in flashes:
+            flash(msg, 'warning')
+    else:
+        current_user.firstname = flask.request.form['firstname']
+        current_user.surname = flask.request.form['surname']
+
+        if flask.request.form['email'] != current_user.email:
+            current_user.email = flask.request.form['email']
+            current_user.email_verified = False
+            current_user.email_verification_key = str(random.randint(100000, 999999))
+            current_user.send_email_verification()
+
+        if flask.request.form['phone'] != current_user.phone:
+            current_user.phone = flask.request.form['phone']
+            current_user.sms_verified = False
+            current_user.sms_verification_key = str(random.randint(100000, 999999))
+            current_user.send_sms_verification()
+
+        if (
+            'password' in flask.request.form and
+            flask.request.form['password'] != ""
+        ):
+            current_user.set_password(flask.request.form['password'])
+
+        database.DB.session.commit()
+
+        flask.flash(u'Your details have been updated', 'success')
+
+        return flask.redirect(flask.url_for('.index'))
 
 @VIEWS.route('/resendemailverification/')
 @login_required
@@ -196,3 +293,40 @@ def verify_sms():
 
     return flask.redirect(flask.url_for('.index'))
 
+@VIEWS.route('/updatealertpreferences/', methods=['POST'])
+@login_required
+def update_alert_preferences():
+    if (
+        'send_emails' in flask.request.form and
+        flask.request.form['send_emails'] == 'yes'
+    ):
+        current_user.send_email_alerts = True
+    else:
+        current_user.send_email_alerts = False
+
+    if (
+        'send_sms' in flask.request.form and
+        flask.request.form['send_sms'] == 'yes'
+    ):
+        current_user.send_sms_alerts = True
+    else:
+        current_user.send_sms_alerts = False
+
+    for allergen in models.Allergen.query.all():
+        key = 'allergen-{}'.format(allergen.id)
+
+        if (
+            key in flask.request.form and
+            flask.request.form[key] == 'yes'
+        ):
+            if allergen not in current_user.allergens:
+                current_user.allergens.append(allergen)
+        else:
+            if allergen in current_user.allergens:
+                current_user.allergens.remove(allergen)
+
+    database.DB.session.commit()
+
+    flask.flash(u'Alert preferences updated.', 'success')
+
+    return flask.redirect(flask.url_for('.index'))

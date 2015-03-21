@@ -71,7 +71,7 @@ class Emailer:
             'utf-8'
         )
 
-        msg['Subject'] = ("[NHTG15] - " + subject)
+        msg['Subject'] = ("[AllergenAlert] - " + subject)
         msg['From'] = msgfrom
         if isinstance(to, list):
             for email in to:

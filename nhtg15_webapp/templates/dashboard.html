@@ -55,7 +55,7 @@
         <p class="small">Leave these fields blank if you don't wish to change your password.</p>
       </div>
       <div class="large-4 columns">
-        <input type="submit" value="Update" class="button small right" />
+        <input type="submit" value="Update Details" class="button small right" />
       </div>
     </section>
   </form>
@@ -97,6 +97,33 @@
 
   <section class="row">
     <div class="columns">
+      <h3>Alert preferences</h3>
+      <form action="{{ url_for('views.update_alert_preferences') }}" method="post">
+        <div class="row">
+          <div class="large-6 columns">
+            <input type="checkbox" name="send_emails" id="send_emails" value="yes" {% if current_user.send_email_alerts %}checked="checked"{% endif %} /><label for="send_emails">Send email notifications</label>
+          </div>
+          <div class="large-6 columns">
+            <input type="checkbox" name="send_sms" id="send_sms" value="yes" {% if current_user.send_sms_alerts %}checked="checked"{% endif %} /><label for="send_sms">Send SMS notifications</label>
+          </div>
+        </div>
+        <fieldset>
+          <legend>Relevant Allergens</legend>
+          <div class="row" id="allergens">
+            {% for allergen in allergens %}
+              <div class="large-4 columns">
+                <input type="checkbox" name="allergen-{{ allergen.id }}" id="allergen-{{ allergen.id }}" value="yes" {% if allergen in current_user.allergens %}checked="checked"{% endif %} /><label for="allergen-{{ allergen.id }}">{{ allergen.nicename }}</label>
+              </div>
+            {% endfor %}
+          </div>
+        </fieldset>
+        <input type="submit" value="Update Preferences" class="button small right" />
+      </form>
+    </div>
+  </section>
+
+  <section class="row">
+    <div class="columns">
       <h3>Previous Alerts</h3>
       {% for alert in alerts.items %}
       <article class="alert">
@@ -114,7 +141,4 @@
       {% endif %}
     </div>
   </section>
-{% endblock %}
-
-{% block js %}
 {% endblock %}

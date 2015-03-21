@@ -48,7 +48,10 @@
     <script src="/static/js/foundation.min.js"></script>
     <script>
       $(document).foundation();
+
+      jQuery('#flashes li').on('click', function(event) {
+          jQuery(event.target).fadeOut(250);
+      });
     </script>
-    {% block js %}{% endblock %}
   </body>
 </html>
