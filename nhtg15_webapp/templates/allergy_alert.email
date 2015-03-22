@@ -1,5 +1,5 @@
 Hi {{ user.fullname }}!
 
-The Foods Standards Agency has just released an allergen alert regarding {{ alert.product }} produced by {{ alert.brand }}, which has been discovered to contain {{ alert.allergen.nicename }}.
+The Foods Standards Agency has just released an allergen alert for the {{ alert.location }} area regarding {{ alert.product }} produced by {{ alert.brand }}, which has been discovered to contain {{ alert.allergen.nicename }}.
 
 For further information, see {{ alert.long_url }}

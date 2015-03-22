@@ -4,6 +4,7 @@ import random
 
 from flask.ext.bcrypt import Bcrypt
 from flask.ext.sqlalchemy import SQLAlchemy
+from flask.ext import whooshalchemy
 import flask
 
 from nhtg15_webapp import app
@@ -30,6 +31,19 @@ user_allergen_link = DB.Table(
     DB.Column('allergen_id',
         DB.Integer,
         DB.ForeignKey('allergen.id')
+    )
+)
+
+alert_area_link = DB.Table(
+    'alert_area_link',
+    DB.Model.metadata,
+    DB.Column('alert_id',
+        DB.Integer,
+        DB.ForeignKey('alert.id')
+    ),
+    DB.Column('area_id',
+        DB.Integer,
+        DB.ForeignKey('area.id')
     )
 )
 
@@ -119,7 +133,7 @@ class User(DB.Model):
         DB.String(120),
         nullable=False
     )
-    fullname = DB.column_property(firstname + " " + surname)
+    fullname = DB.column_property(firstname + ' ' + surname)
     phone = DB.Column(
         DB.String(20),
         nullable=False
@@ -159,7 +173,21 @@ class User(DB.Model):
         lazy='dynamic'
     )
 
-    def __init__(self, email, password, firstname, surname, phone):
+    location_id = DB.Column(
+        DB.Integer,
+        DB.ForeignKey('location.id'),
+        nullable=False
+    )
+    location = DB.relationship(
+        'Location',
+        backref=DB.backref(
+            'users',
+            lazy='dynamic'
+        ),
+        foreign_keys=[location_id]
+    )
+
+    def __init__(self, email, password, firstname, surname, phone, location):
         self.email = email
         self.set_password(password)
         self.firstname = firstname
@@ -171,6 +199,11 @@ class User(DB.Model):
         self.sms_verification_key = str(random.randint(100000, 999999))
         self.email_verified = False
         self.sms_verified = False
+
+        if hasattr(location, 'id'):
+            self.location_id = location.id
+        else:
+            self.location_id = location
 
     def __repr__(self):
         return "<User({0}): {1}>".format(self.id, self.fullname)
@@ -212,6 +245,19 @@ class User(DB.Model):
         return user
 
     def send_alert(self, alert):
+        if alert.areas:
+            area = self.location.area
+            area_ids = [a.id for a in alert.areas.all()]
+            print area_ids
+            print repr(area)
+
+            while area is not None and area.id not in area_ids:
+                print repr(area)
+                area = area.parent
+
+            if area is None:
+                return
+
         if self.email_verified and self.send_email_alerts:
             emailer.EMAILER.send_template(
                 self.email,
@@ -295,6 +341,16 @@ class Alert(DB.Model):
         foreign_keys=[allergen_id]
     )
 
+    areas = DB.relationship(
+        'Area',
+        secondary=alert_area_link,
+        backref=DB.backref(
+            'alerts',
+            lazy='dynamic'
+        ),
+        lazy='dynamic'
+    )
+
     def __init__(self, brand, product, location, datetime, allergen, url):
         self.brand = brand
         self.product = product
@@ -307,6 +363,17 @@ class Alert(DB.Model):
             self.allergen_id = allergen.id
         else:
             self.allergen_id = allergen
+
+        area_query = Area.query.whoosh_search(location)
+
+        for area_type in ['COUNTRY', 'COUNTY', 'DISTRICT', 'WARD']:
+            areas = area_query.filter(Area.area_type == area_type).all()
+
+            if areas:
+                for area in areas:
+                    self.areas.append(area)
+
+                break
 
     def __repr__(self):
         return '<Alert({}): {}/{}>'.format(self.id, self.brand, self.product)
@@ -323,3 +390,166 @@ class Alert(DB.Model):
     def send_alerts(self):
         for user in self.allergen.users:
             user.send_alert(self)
+
+
+class Location(DB.Model):
+    id = DB.Column(
+        DB.Integer(),
+        primary_key=True,
+        nullable=False
+    )
+    postcode_outward = DB.Column(
+        DB.String(4),
+        nullable=False
+    )
+    postcode_inward = DB.Column(
+        DB.String(3),
+        nullable=False
+    )
+    postcode = DB.column_property(postcode_outward + ' ' + postcode_inward)
+    eastings = DB.Column(
+        DB.Integer(),
+        nullable=False
+    )
+    northings = DB.Column(
+        DB.Integer(),
+        nullable=False
+    )
+
+    area_id = DB.Column(
+        DB.Integer,
+        DB.ForeignKey('area.id'),
+        nullable=True
+    )
+    area = DB.relationship(
+        'Area',
+        backref=DB.backref(
+            'locations',
+            lazy='dynamic'
+        ),
+        foreign_keys=[area_id]
+    )
+
+    def __init__(self, postcode, eastings, northings):
+        self.postcode_inward = postcode[-3:]
+        self.postcode_outward = postcode[:-3].strip()
+        self.eastings = eastings
+        self.northings = northings
+
+    def __repr__(self):
+        return '<Location({}): {}>'.format(self.id, self.postcode)
+
+
+    @staticmethod
+    def get_by_id(id):
+        location = Location.query.filter(Location.id==int(id)).first()
+
+        if not location:
+            return None
+
+        return location
+
+    @staticmethod
+    def get_by_postcode(postcode):
+        location = Location.query.filter(
+            Location.postcode_outward == postcode[:-3].strip()
+        ).filter(
+            Location.postcode_inward == postcode[-3:]
+        ).first()
+
+        if not location:
+            return None
+
+        return location
+
+
+class Area(DB.Model):
+    __searchable__ = ['name']
+
+    id = DB.Column(
+        DB.Integer(),
+        primary_key=True,
+        nullable=False
+    )
+    code = DB.Column(
+        DB.String(9),
+        nullable=False
+    )
+    name = DB.Column(
+        DB.String(50),
+        nullable=False
+    )
+    area_type = DB.Column(
+        DB.Enum(
+            'COUNTRY',
+            'COUNTY',
+            'DISTRICT',
+            'WARD'
+        ),
+        nullable=False
+    )
+
+    parent_id = DB.Column(
+        DB.Integer,
+        DB.ForeignKey('area.id'),
+        nullable=True
+    )
+    parent = DB.relationship(
+        'Area',
+        backref=DB.backref(
+            'children',
+            lazy='dynamic'
+        ),
+        foreign_keys=[parent_id],
+        remote_side=[id]
+    )
+
+    def __init__(self, name, area_type, code=None):
+        self.code = code
+        self.name = name
+        self.area_type = area_type
+
+    def __repr__(self):
+        return '<Area({}): {}{}>'.format(
+            self.id,
+            '{}/'.format(self.code) if self.code is not None else '',
+            self.name
+        )
+
+    @staticmethod
+    def get_by_id(id):
+        area = Area.query.filter(Area.id==int(id)).first()
+
+        if not area:
+            return None
+
+        return area
+
+    @staticmethod
+    def get_by_code(code):
+        area = Area.query.filter(Area.code==code).first()
+
+        if not area:
+            return None
+
+        return area
+
+    @staticmethod
+    def get_by_name(name):
+        area = Area.query.filter(Area.name==name).first()
+
+        if not area:
+            return None
+
+        return area
+
+    def get_locations():
+        for location in self.locations:
+            yield location
+
+        for child in self.children:
+            for location in child.get_locations:
+                yield location
+
+
+whooshalchemy.whoosh_index(app.APP, Area)

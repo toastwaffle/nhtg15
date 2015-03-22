@@ -92,6 +92,19 @@ def register():
         flashes.append(u'Phone cannot be blank')
         valid = False
 
+    if (
+        'postcode' not in flask.request.form or
+        flask.request.form['postcode'] == ''
+    ):
+        flashes.append(u'Postcode cannot be blank')
+        valid = False
+
+    location = models.Location.get_by_postcode(flask.request.form['postcode'])
+
+    if not location:
+        flashes.append(u'Postcode not recognised')
+        valid = False
+
     if not valid:
         flask.flash(
             (
@@ -113,7 +126,8 @@ def register():
         flask.request.form['password'],
         flask.request.form['firstname'],
         flask.request.form['surname'],
-        flask.request.form['phone']
+        flask.request.form['phone'],
+        location
     )
 
     database.DB.session.add(user)
@@ -203,6 +217,19 @@ def update_details():
         flashes.append(u'Phone cannot be blank')
         valid = False
 
+    if (
+        'postcode' not in flask.request.form or
+        flask.request.form['postcode'] == ''
+    ):
+        flashes.append(u'Postcode cannot be blank')
+        valid = False
+
+    location = models.Location.get_by_postcode(flask.request.form['postcode'])
+
+    if not location:
+        flashes.append(u'Postcode not recognised')
+        valid = False
+
     if not valid:
         flash(
             (
@@ -216,6 +243,7 @@ def update_details():
     else:
         current_user.firstname = flask.request.form['firstname']
         current_user.surname = flask.request.form['surname']
+        current_user.location_id = location.id
 
         if flask.request.form['email'] != current_user.email:
             current_user.email = flask.request.form['email']

@@ -20,4 +20,4 @@ def application(req_environ, start_response):
 
     app.APP.register_blueprint(views.VIEWS)
 
-    return app(req_environ, start_response)
+    return app.APP(req_environ, start_response)

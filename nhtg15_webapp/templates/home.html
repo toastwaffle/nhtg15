@@ -79,6 +79,12 @@
         </div>
         <div class="row">
           <div class="columns">
+            <label for="register-postcode">Postcode</label>
+            <input type="text" name="postcode" id="register-postcode"{% if form['postcode'] %} value="{{ form['postcode'] }}"{% endif %} />
+          </div>
+        </div>
+        <div class="row">
+          <div class="columns">
             <input type="submit" value="Register" class="button small" />
           </div>
         </div>
